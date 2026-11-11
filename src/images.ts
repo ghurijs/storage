@@ -82,9 +82,10 @@ function jpegSize(b: Uint8Array): [number, number] | null {
 }
 
 function webpSize(b: Uint8Array): [number, number] | null {
-  if (b.length < 30) return null
+  if (b.length < 25) return null
   const chunk = ascii(b, 12, 16)
   if (chunk === 'VP8 ') {
+    if (b.length < 30) return null
     // frame tag (3 bytes) + start code 9d 01 2a + 14-bit width/height
     if (b[23] !== 0x9d || b[24] !== 0x01 || b[25] !== 0x2a) return null
     return [u16le(b, 26) & 0x3fff, u16le(b, 28) & 0x3fff]
@@ -97,7 +98,7 @@ function webpSize(b: Uint8Array): [number, number] | null {
     const b3 = b[24]
     return [1 + (((b1 & 0x3f) << 8) | b0), 1 + (((b3 & 0x0f) << 10) | (b2 << 2) | ((b1 & 0xc0) >> 6))]
   }
-  if (chunk === 'VP8X') return [1 + u24le(b, 24), 1 + u24le(b, 27)]
+  if (chunk === 'VP8X' && b.length >= 30) return [1 + u24le(b, 24), 1 + u24le(b, 27)]
   return null
 }
 

@@ -264,9 +264,13 @@ export interface FileFieldOptions extends CharFieldOptions {
   deleteWithModel?: boolean
 }
 
-/** The construct signature FileField inherits: CharField at runtime, typed as `Field<FieldFile, O>`. */
+/**
+ * The construct signature FileField inherits: CharField at runtime (varchar column, `instanceof CharField`),
+ * typed as `Field<FieldFile, …>`. `null` is dropped from the phantom options so model instances are typed
+ * `FieldFile` even with `null: true` — the attribute is always a FieldFile (check `file.isEmpty`).
+ */
 const FileFieldBase = CharField as unknown as {
-  new <O extends CharFieldOptions>(options?: O): Field<FieldFile, O> & { maxLength?: number }
+  new <O extends CharFieldOptions>(options?: O): Field<FieldFile, Omit<O, 'null'>> & { maxLength?: number }
   readonly internalType: string
 }
 

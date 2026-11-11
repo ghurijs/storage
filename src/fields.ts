@@ -450,6 +450,7 @@ export class FileField<const O extends FileFieldOptions = {}> extends FileFieldB
     const u = this.options.uploadTo
     if (typeof u === 'string' && u) extra.uploadTo = u
     else if (typeof u === 'function') extra.uploadTo = { callable: u.name || 'anonymous' }
+    else if (u && typeof u === 'object' && 'callable' in u) extra.uploadTo = { callable: u.callable } // historical
     if (typeof this.options.storage === 'string' && this.options.storage !== 'default')
       extra.storage = this.options.storage
     return extra

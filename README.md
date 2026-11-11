@@ -136,6 +136,9 @@ endpoints, else `us-east-1`), `publicUrl?`, `forcePathStyle?` (default: path-sty
 `amazonaws.com`), `cacheControl?`, `fetch?` (custom fetch). Requests are signed with SigV4 by
 [aws4fetch](https://github.com/mhart/aws4fetch) — no AWS SDK, works on Workers and Node.
 
+On AWS grant `s3:ListBucket` as well as `s3:GetObject`/`s3:PutObject`/`s3:DeleteObject`: without it S3
+answers `403` instead of `404` for missing keys, which breaks `exists()` (used to pick free names).
+
 `url()` returns `publicUrl` + name (or `MEDIA_URL` + name); private buckets use
 [`presignedUrl()`](#presigned-urls-and-direct-uploads).
 

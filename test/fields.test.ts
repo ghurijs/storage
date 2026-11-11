@@ -312,6 +312,15 @@ describe('FileField schema & introspection', () => {
     expect(rebuilt).toBeInstanceOf(FileField)
     expect(rebuilt.null).toBe(true)
     expect(rebuilt.dbType('sqlite')).toBe('varchar(100)')
+    // stable round trip (the autodetector compares deconstructions)
+    for (const [model, name] of [
+      [Doc, 'file'],
+      [Doc, 'attachment'],
+      [Photo, 'image'],
+    ] as const) {
+      const d = field(model, name).deconstruct()
+      expect(fieldFromSpec({ ...d }).deconstruct()).toEqual(d)
+    }
     const rebuiltImg = fieldFromSpec({ type: 'ImageField', maxLength: 255, widthField: 'w' }) as ImageField
     expect(rebuiltImg.widthField).toBe('w')
     expect(rebuiltImg.dbType('postgresql')).toBe('varchar(255)')

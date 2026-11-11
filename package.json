@@ -1,0 +1,80 @@
+{
+  "name": "@ghuri/storage",
+  "version": "0.1.0-alpha.0",
+  "description": "Ghuri storage: R2, S3, filesystem backends and FileField/ImageField",
+  "type": "module",
+  "license": "MIT",
+  "author": "Ghuri contributors",
+  "homepage": "https://github.com/ghurijs/storage#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ghurijs/storage.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ghurijs/storage/issues"
+  },
+  "keywords": [
+    "ghuri",
+    "django",
+    "cloudflare",
+    "workers",
+    "hono",
+    "drizzle",
+    "d1",
+    "r2",
+    "framework"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./fs": {
+      "types": "./dist/fs.d.ts",
+      "import": "./dist/fs.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src test",
+    "format": "biome format --write src test"
+  },
+  "peerDependencies": {
+    "@ghuri/core": "^0.1.0-alpha.0",
+    "@ghuri/orm": "^0.1.0-alpha.0",
+    "hono": "^4.13.0"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "tsup": "^8.5.1",
+    "vitest": "^5.1.0",
+    "@biomejs/biome": "^2.6.6",
+    "@types/node": "^24.0.0",
+    "@ghuri/core": "^0.1.0-alpha.0",
+    "@ghuri/orm": "^0.1.0-alpha.0",
+    "hono": "^4.13.0",
+    "@cloudflare/workers-types": "^5.20261110.0",
+    "miniflare": "^4.20260730.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "next"
+  },
+  "dependencies": {
+    "aws4fetch": "^1.0.20"
+  }
+}

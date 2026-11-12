@@ -1,3 +1,4 @@
+import { ImproperlyConfigured } from '@ghuri/core'
 import { AwsClient } from 'aws4fetch'
 import {
   bytesStream,
@@ -70,10 +71,13 @@ function contentDisposition(filename: string): string {
 /**
  * Any S3-compatible API (AWS S3, Cloudflare R2's S3 endpoint, MinIO, …) over `fetch` with SigV4 signing
  * (aws4fetch). Works on Workers and Node. Supports `presignedUrl()`.
+ *
+ * Credentials are only needed to sign requests: `url()` works without them (tests, scripts), while the
+ * other methods throw `ImproperlyConfigured` when `accessKeyId` / `secretAccessKey` are missing.
  */
 export class S3Storage extends Storage {
   readonly backend: string = 's3'
-  readonly client: AwsClient
+  #client: AwsClient | undefined
   readonly endpoint: URL
   readonly region: string
   readonly forcePathStyle: boolean
@@ -87,15 +91,31 @@ export class S3Storage extends Storage {
     const host = this.endpoint.hostname
     this.region = options.region ?? (host.endsWith('.r2.cloudflarestorage.com') ? 'auto' : 'us-east-1')
     this.forcePathStyle = options.forcePathStyle ?? !host.endsWith('amazonaws.com')
-    this.client = new AwsClient({
-      accessKeyId: options.accessKeyId,
-      secretAccessKey: options.secretAccessKey,
-      sessionToken: options.sessionToken,
+    this.fetchFn = options.fetch ?? ((req) => fetch(req))
+  }
+
+  /** The SigV4 signer. Throws `ImproperlyConfigured` when the credentials are missing. */
+  get client(): AwsClient {
+    if (this.#client) return this.#client
+    const { accessKeyId, secretAccessKey } = this.options
+    if (!accessKeyId || !secretAccessKey) {
+      const missing = [!accessKeyId && '`accessKeyId`', !secretAccessKey && '`secretAccessKey`'].filter(
+        Boolean,
+      )
+      throw new ImproperlyConfigured(
+        `s3() storage for bucket '${this.options.bucket}' has no ${missing.join(' or ')}; reading, writing ` +
+          'and signing files need credentials (url() works without them).',
+      )
+    }
+    this.#client = new AwsClient({
+      accessKeyId,
+      secretAccessKey,
+      sessionToken: this.options.sessionToken,
       service: 's3',
       region: this.region,
       retries: 0,
     })
-    this.fetchFn = options.fetch ?? ((req) => fetch(req))
+    return this.#client
   }
 
   /** URL of the bucket (no trailing slash). */

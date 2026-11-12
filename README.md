@@ -105,7 +105,9 @@ import { r2 } from '@ghuri/storage'
 STORAGES: { default: r2('MEDIA', { publicUrl: 'https://media.example.com', cacheControl: 'public, max-age=31536000' }) }
 ```
 
-- `binding`: the binding name (or the bucket object). Missing bindings raise `ImproperlyConfigured`.
+- `binding`: the binding name (or the bucket object). `url()` does no I/O and works without the binding
+  (tests, scripts); `save`, `open`, `stat`, `exists`, `size`, `delete` and `listdir` raise `ImproperlyConfigured`
+  when it is missing.
 - `publicUrl`: a custom domain or `https://pub-<hash>.r2.dev` connected to the bucket. Without it `url()`
   uses `MEDIA_URL` and you serve files through [`serveMedia()`](#serving-media) (R2 egress is free).
 - Content type, `cacheControl` and `contentDisposition` are stored as R2 `httpMetadata`; `metadata` as
@@ -138,6 +140,9 @@ endpoints, else `us-east-1`), `publicUrl?`, `forcePathStyle?` (default: path-sty
 
 On AWS grant `s3:ListBucket` as well as `s3:GetObject`/`s3:PutObject`/`s3:DeleteObject`: without it S3
 answers `403` instead of `404` for missing keys, which breaks `exists()` (used to pick free names).
+
+Credentials are only needed for requests and `presignedUrl()`: without `accessKeyId` / `secretAccessKey` those
+raise `ImproperlyConfigured`, while `url()` still works.
 
 `url()` returns `publicUrl` + name (or `MEDIA_URL` + name); private buckets use
 [`presignedUrl()`](#presigned-urls-and-direct-uploads).

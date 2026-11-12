@@ -1,6 +1,6 @@
 {
   "name": "@ghuri/storage",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Ghuri storage: R2, S3, filesystem backends and FileField/ImageField",
   "type": "module",
   "license": "MIT",

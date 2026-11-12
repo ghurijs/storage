@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.0-alpha.1
 
 - `r2()` no longer needs its bucket binding to build URLs: a missing (or invalid) binding is reported by the
   I/O methods (`save`, `open`, `stat`, `exists`, `size`, `getModifiedTime`, `delete`, `listdir`) with the same

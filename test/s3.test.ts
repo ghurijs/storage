@@ -1,3 +1,4 @@
+import { ImproperlyConfigured } from '@ghuri/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { S3Storage, StorageError, s3 } from '../src/index'
 import { S3Mock } from './helpers/s3mock'
@@ -164,6 +165,32 @@ describe('S3Storage', () => {
     })
     await expect(missing.listdir()).rejects.toMatchObject({ status: 404, code: 'NoSuchBucket' })
     expect(await storage.open('missing.txt')).toBeNull()
+  })
+
+  it('builds URLs without credentials; requests and signing need them', async () => {
+    const env: Record<string, string | undefined> = {}
+    const noCreds = s3({
+      bucket: 'media',
+      accessKeyId: env.S3_KEY as string,
+      secretAccessKey: env.S3_SECRET as string,
+    }).create({})
+    expect(noCreds.url('a b.png')).toBe('/media/a%20b.png')
+    const cdn = new S3Storage({
+      bucket: 'media',
+      accessKeyId: 'AKID',
+      secretAccessKey: '',
+      publicUrl: 'https://cdn.example',
+    })
+    expect(cdn.url('x/y.png')).toBe('https://cdn.example/x/y.png')
+    const missing = /s3\(\) storage for bucket 'media' has no `accessKeyId` or `secretAccessKey`/
+    await expect(noCreds.save('a.txt', 'x')).rejects.toThrow(ImproperlyConfigured)
+    await expect(noCreds.save('a.txt', 'x')).rejects.toThrow(missing)
+    await expect(noCreds.open('a.txt')).rejects.toThrow(missing)
+    await expect(noCreds.exists('a.txt')).rejects.toThrow(missing)
+    await expect(noCreds.delete('a.txt')).rejects.toThrow(missing)
+    await expect(noCreds.listdir()).rejects.toThrow(missing)
+    await expect(noCreds.presignedUrl('a.txt')).rejects.toThrow(missing)
+    await expect(cdn.stat('a.txt')).rejects.toThrow(/has no `secretAccessKey`;/)
   })
 
   it('paginates listdir with continuation tokens', async () => {

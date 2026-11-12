@@ -76,19 +76,47 @@ function info(obj: R2ObjectLike): StoredFileInfo {
   }
 }
 
+function isBucket(v: unknown): v is R2BucketLike {
+  return (
+    !!v && typeof (v as R2BucketLike).put === 'function' && typeof (v as R2BucketLike).head === 'function'
+  )
+}
+
 /**
  * Cloudflare R2 through a Workers binding. Fast and free of credentials; it cannot create presigned URLs
  * (use `s3()` against R2's S3 endpoint for those). `url()` uses `publicUrl`, else `MEDIA_URL` (serve the
  * files with `serveMedia()`).
+ *
+ * `url()` does no I/O, so it works without the binding (tests, scripts, a Worker without the bucket); the
+ * other methods throw `ImproperlyConfigured` when the binding is missing.
  */
 export class R2Storage extends Storage {
   readonly backend: string = 'r2'
+  readonly #bucket: R2BucketLike | undefined
+  readonly #bindingName: string | undefined
 
+  /**
+   * @param bucket the R2 binding; `null` / `undefined` makes every I/O method throw `ImproperlyConfigured`.
+   * @param bindingName binding name used in that error message.
+   */
   constructor(
-    readonly bucket: R2BucketLike,
+    bucket: R2BucketLike | null | undefined,
     readonly options: R2StorageOptions = {},
+    bindingName?: string,
   ) {
     super()
+    this.#bucket = bucket ?? undefined
+    this.#bindingName = bindingName
+  }
+
+  /** The R2 binding. Throws `ImproperlyConfigured` when it is missing. */
+  get bucket(): R2BucketLike {
+    if (this.#bucket) return this.#bucket
+    const name = this.#bindingName === undefined ? '' : ` '${this.#bindingName}'`
+    throw new ImproperlyConfigured(
+      `R2 bucket binding${name} was not found in env. Add it to wrangler.jsonc under "r2_buckets". ` +
+        '(url() works without it; reading and writing files needs the binding.)',
+    )
   }
 
   protected async _save(name: string, body: FileBody, opts: BackendSaveOptions): Promise<string> {
@@ -154,19 +182,16 @@ export class R2Storage extends Storage {
 /**
  * `STORAGES` entry for a Workers R2 binding: `r2('MEDIA', { publicUrl: 'https://media.example.com' })`.
  * `binding` is the binding name in `wrangler.jsonc` (or the bucket object itself).
+ *
+ * A missing binding is reported when the storage first reads or writes a file (`ImproperlyConfigured`), not
+ * when it is created: `url()` needs no binding.
  */
 export function r2(binding: string | R2BucketLike, opts: R2StorageOptions = {}): StorageConfig {
   return {
     backend: 'r2',
     create(env) {
-      const bucket = (typeof binding === 'string' ? env[binding] : binding) as R2BucketLike | undefined
-      if (!bucket || typeof bucket.put !== 'function' || typeof bucket.head !== 'function') {
-        throw new ImproperlyConfigured(
-          `R2 bucket binding '${String(binding)}' was not found in env. Add it to wrangler.jsonc under ` +
-            '"r2_buckets".',
-        )
-      }
-      return new R2Storage(bucket, opts)
+      const bucket = typeof binding === 'string' ? env[binding] : binding
+      return new R2Storage(isBucket(bucket) ? bucket : undefined, opts, String(binding))
     },
   }
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- `r2()` no longer needs its bucket binding to build URLs: a missing (or invalid) binding is reported by the
+  I/O methods (`save`, `open`, `stat`, `exists`, `size`, `getModifiedTime`, `delete`, `listdir`) with the same
+  `ImproperlyConfigured` message, not when the storage is created, so `url()` and `FieldFile.url` work in tests
+  without a stubbed `MEDIA` binding. `R2Storage`'s constructor accepts a missing bucket and `bucket` is now a
+  getter that throws when it is absent.
+- `s3()` creates its SigV4 client on first use: `url()` works without `accessKeyId` / `secretAccessKey`; requests
+  and `presignedUrl()` throw `ImproperlyConfigured` naming the missing option (before, aws4fetch threw a
+  `TypeError` as soon as the storage was created).
+
 ## 0.1.0-alpha.0
 
 - `Storage` base class (Django's storage API): `save` (Blob, File, ArrayBuffer, typed arrays, ReadableStream,

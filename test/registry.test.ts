@@ -57,9 +57,47 @@ describe('storages registry', () => {
     expect(() => runWithContext(ctx({}), () => storages.get('media'))).toThrow(
       /storage alias 'media' is not configured/,
     )
-    expect(() => runWithContext(ctx({ STORAGES: { default: r2('MEDIA') } }), () => storages.get())).toThrow(
-      /R2 bucket binding 'MEDIA' was not found/,
+  })
+
+  it('r2() without its binding still builds URLs; I/O fails clearly', async () => {
+    const settings = {
+      STORAGES: { default: r2('MEDIA'), cdn: r2('MEDIA', { publicUrl: 'https://cdn.example' }) },
+    }
+    const [plain, cdn] = runWithContext(ctx(settings), () => [storages.get(), storages.get('cdn')])
+    expect(plain).toBeInstanceOf(R2Storage)
+    expect(runWithContext(ctx({ MEDIA_URL: '/files/' }), () => plain.url('a b/c.png'))).toBe(
+      '/files/a%20b/c.png',
     )
+    expect(plain.url('c.png')).toBe('/media/c.png')
+    expect(cdn.url('avatars/me.png')).toBe('https://cdn.example/avatars/me.png')
+
+    const missing = /R2 bucket binding 'MEDIA' was not found in env/
+    await expect(plain.save('a.txt', 'x')).rejects.toThrow(ImproperlyConfigured)
+    await expect(plain.save('a.txt', 'x')).rejects.toThrow(missing)
+    await expect(plain.save('a.txt', 'x', { overwrite: true })).rejects.toThrow(missing)
+    await expect(plain.open('a.txt')).rejects.toThrow(missing)
+    await expect(plain.open('a.txt', { range: { offset: 0, length: 1 } })).rejects.toThrow(missing)
+    await expect(plain.stat('a.txt')).rejects.toThrow(missing)
+    await expect(plain.exists('a.txt')).rejects.toThrow(missing)
+    await expect(plain.size('a.txt')).rejects.toThrow(missing)
+    await expect(plain.getModifiedTime('a.txt')).rejects.toThrow(missing)
+    await expect(plain.delete('a.txt')).rejects.toThrow(missing)
+    await expect(plain.listdir('')).rejects.toThrow(missing)
+    expect(() => (plain as R2Storage).bucket).toThrow(missing)
+    await expect(plain.presignedUrl('a.txt')).rejects.toThrow(NotSupportedError)
+
+    // a value that isn't an R2 bucket counts as missing too
+    const wrong = runWithContext(ctx({ STORAGES: { default: r2('MEDIA') } }, { MEDIA: 'not-a-bucket' }), () =>
+      storages.get(),
+    )
+    expect(wrong.url('x.png')).toBe('/media/x.png')
+    await expect(wrong.exists('x.png')).rejects.toThrow(missing)
+  })
+
+  it('R2Storage constructed without a bucket builds URLs only', async () => {
+    const s = new R2Storage(undefined, { publicUrl: 'https://pub-123.r2.dev/' })
+    expect(s.url('a.png')).toBe('https://pub-123.r2.dev/a.png')
+    await expect(s.stat('a.png')).rejects.toThrow(/R2 bucket binding was not found in env/)
   })
 
   it('r2() reads the binding from env', async () => {

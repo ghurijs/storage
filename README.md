@@ -145,7 +145,7 @@ answers `403` instead of `404` for missing keys, which breaks `exists()` (used t
 ### Filesystem (Node / VPS)
 
 ```ts
-import { fileSystemStorage } from '@ghuri/storage/fs'   // Node only (node:fs) — never import it in a Worker
+import { fileSystemStorage } from '@ghuri/storage/fs'   // uses node:fs: for Node; importable but not useful on Workers
 STORAGES: { default: fileSystemStorage({ location: '/var/www/media', baseUrl: '/media/' }) }
 ```
 
